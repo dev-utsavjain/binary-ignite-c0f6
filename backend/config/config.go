@@ -4,7 +4,7 @@ import (
 	"os"
 )
 
-// Config holds all configuration for the application
+// Config holds the application configuration
 type Config struct {
 	DBHost         string
 	DBPort         string
@@ -17,8 +17,8 @@ type Config struct {
 	AllowedOrigins string
 }
 
-// Load loads configuration from environment variables
-func Load() *Config {
+// LoadConfig loads configuration from environment variables
+func LoadConfig() *Config {
 	return &Config{
 		DBHost:         getEnv("DB_HOST", "localhost"),
 		DBPort:         getEnv("DB_PORT", "5432"),
@@ -32,10 +32,11 @@ func Load() *Config {
 	}
 }
 
-// getEnv gets an environment variable with a default value
+// getEnv retrieves an environment variable or returns a default value
 func getEnv(key, defaultValue string) string {
-	if value := os.Getenv(key); value != "" {
-		return value
+	value := os.Getenv(key)
+	if value == "" {
+		return defaultValue
 	}
-	return defaultValue
+	return value
 }

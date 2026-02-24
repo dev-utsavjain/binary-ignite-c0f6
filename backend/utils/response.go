@@ -14,7 +14,7 @@ type SuccessResponse struct {
 // ErrorResponse represents an error API response
 type ErrorResponse struct {
 	Success bool   `json:"success"`
-	Message string `json:"message"`
+	Error   string `json:"error"`
 }
 
 // SendSuccess sends a successful JSON response
@@ -27,7 +27,7 @@ func SendSuccess(w http.ResponseWriter, data interface{}) {
 	})
 }
 
-// SendSuccessWithStatus sends a successful JSON response with custom status code
+// SendSuccessWithStatus sends a successful JSON response with a custom status code
 func SendSuccessWithStatus(w http.ResponseWriter, data interface{}, statusCode int) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
@@ -43,6 +43,6 @@ func SendError(w http.ResponseWriter, message string, statusCode int) {
 	w.WriteHeader(statusCode)
 	json.NewEncoder(w).Encode(ErrorResponse{
 		Success: false,
-		Message: message,
+		Error:   message,
 	})
 }

@@ -1,6 +1,10 @@
 package views
 
-import "time"
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
 
 // CreateTaskRequest represents the request body for creating a task
 type CreateTaskRequest struct {
@@ -15,14 +19,14 @@ type UpdateTaskRequest struct {
 
 // TaskResponse represents the response structure for a task
 type TaskResponse struct {
-	ID        string    `json:"id"`
+	ID        uuid.UUID `json:"id"`
 	Title     string    `json:"title"`
 	Completed bool      `json:"completed"`
 	CreatedAt time.Time `json:"createdAt"`
 	UpdatedAt time.Time `json:"updatedAt"`
 }
 
-// TaskListResponse represents a list of tasks
+// TaskListResponse represents the response structure for a list of tasks
 type TaskListResponse struct {
 	Tasks []TaskResponse `json:"tasks"`
 	Count int            `json:"count"`

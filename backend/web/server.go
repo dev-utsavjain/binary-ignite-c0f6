@@ -28,7 +28,7 @@ func StartServer() {
 	runServer(server)
 }
 
-// createServer creates and configures the HTTP server
+// createServer sets up the HTTP server with all routes and middleware
 func createServer() *http.Server {
 	mux := http.NewServeMux()
 
@@ -61,7 +61,7 @@ func runServer(server *http.Server) {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
 
-	// Start server in goroutine
+	// Start server in a goroutine
 	go func() {
 		log.Printf("Server starting on %s", server.Addr)
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
@@ -74,7 +74,7 @@ func runServer(server *http.Server) {
 	log.Println("Shutting down server...")
 
 	// Create context with timeout for shutdown
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	// Attempt graceful shutdown
@@ -85,19 +85,20 @@ func runServer(server *http.Server) {
 	log.Println("Server stopped gracefully")
 }
 
-// spaHandler serves static files from dist/ directory and falls back to index.html for SPA routing
+// spaHandler serves static files and falls back to index.html for SPA routing
 func spaHandler(w http.ResponseWriter, r *http.Request) {
-	// Skip API routes (should not reach here, but safety check)
+	// Skip API routes (should be handled by specific handlers)
 	if strings.HasPrefix(r.URL.Path, "/api/") {
 		http.NotFound(w, r)
 		return
 	}
 
+	// Path to dist directory
 	distPath := "./dist"
-	filePath := filepath.Join(distPath, r.URL.Path)
 
 	// Clean the path to prevent directory traversal
-	filePath = filepath.Clean(filePath)
+	cleanPath := filepath.Clean(r.URL.Path)
+	filePath := filepath.Join(distPath, cleanPath)
 
 	// Check if file exists and is not a directory
 	if info, err := os.Stat(filePath); err == nil && !info.IsDir() {
@@ -107,10 +108,13 @@ func spaHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Fallback to index.html for SPA client-side routing
 	indexPath := filepath.Join(distPath, "index.html")
-	if _, err := os.Stat(indexPath); err != nil {
-		http.Error(w, "index.html not found", http.StatusNotFound)
+	if _, err := os.Stat(indexPath); err == nil {
+		http.ServeFile(w, r, indexPath)
 		return
 	}
 
-	http.ServeFile(w, r, indexPath)
+	// If dist folder doesn't exist, return a simple message
+	w.Header().Set("Content-Type", "text/html")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("<html><body><h1>API Server Running</h1><p>Frontend not deployed yet.</p></body></html>"))
 }

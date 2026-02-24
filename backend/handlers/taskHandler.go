@@ -5,12 +5,13 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/google/uuid"
+	"gorm.io/gorm"
+
 	"backend/db"
 	"backend/models"
 	"backend/utils"
 	"backend/views"
-
-	"gorm.io/gorm"
 )
 
 // GetTasks retrieves all tasks from the database, optionally filtered by completion status
@@ -29,7 +30,7 @@ func GetTasks(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Order by created_at descending (newest first)
+	// Order by creation date descending (newest first)
 	if err := query.Order("created_at DESC").Find(&tasks).Error; err != nil {
 		utils.SendError(w, "Failed to retrieve tasks", http.StatusInternalServerError)
 		return
@@ -48,28 +49,25 @@ func CreateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validate title is not empty
-	if !utils.IsNotEmpty(req.Title) {
+	// Validate required fields
+	if req.Title == "" {
 		utils.SendError(w, "Title is required", http.StatusBadRequest)
 		return
 	}
 
 	// Sanitize input
 	title := utils.SanitizeString(req.Title)
-
-	// Validate title length
 	if !utils.IsValidLength(title, 1, 255) {
 		utils.SendError(w, "Title must be between 1 and 255 characters", http.StatusBadRequest)
 		return
 	}
 
-	// Create new task
+	// Create task
 	task := models.Task{
 		Title:     title,
 		Completed: false,
 	}
 
-	// Save to database
 	if err := db.DB.Create(&task).Error; err != nil {
 		utils.SendError(w, "Failed to create task", http.StatusInternalServerError)
 		return
@@ -80,19 +78,23 @@ func CreateTask(w http.ResponseWriter, r *http.Request) {
 
 // GetTaskByID retrieves a single task by its unique identifier
 func GetTaskByID(w http.ResponseWriter, r *http.Request) {
-	// Extract ID from path parameter using Go 1.22+ ServeMux
-	id := r.PathValue("id")
-
-	// Validate ID is not empty
-	if id == "" {
+	// Extract ID from path parameter
+	idParam := r.PathValue("id")
+	if idParam == "" {
 		utils.SendError(w, "Task ID is required", http.StatusBadRequest)
 		return
 	}
 
-	var task models.Task
+	// Parse UUID
+	taskID, err := uuid.Parse(idParam)
+	if err != nil {
+		utils.SendError(w, "Invalid task ID format", http.StatusBadRequest)
+		return
+	}
 
-	// Query database for the task
-	if err := db.DB.Where("id = ?", id).First(&task).Error; err != nil {
+	// Find task by ID
+	var task models.Task
+	if err := db.DB.Where("id = ?", taskID).First(&task).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			utils.SendError(w, "Task not found", http.StatusNotFound)
 			return
@@ -106,18 +108,23 @@ func GetTaskByID(w http.ResponseWriter, r *http.Request) {
 
 // UpdateTask updates an existing task's title or completion status
 func UpdateTask(w http.ResponseWriter, r *http.Request) {
-	// Extract ID from path parameter using Go 1.22+ ServeMux
-	id := r.PathValue("id")
-
-	// Validate ID is not empty
-	if id == "" {
+	// Extract ID from path parameter
+	idParam := r.PathValue("id")
+	if idParam == "" {
 		utils.SendError(w, "Task ID is required", http.StatusBadRequest)
+		return
+	}
+
+	// Parse UUID
+	taskID, err := uuid.Parse(idParam)
+	if err != nil {
+		utils.SendError(w, "Invalid task ID format", http.StatusBadRequest)
 		return
 	}
 
 	// Find existing task
 	var task models.Task
-	if err := db.DB.Where("id = ?", id).First(&task).Error; err != nil {
+	if err := db.DB.Where("id = ?", taskID).First(&task).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			utils.SendError(w, "Task not found", http.StatusNotFound)
 			return
@@ -133,43 +140,23 @@ func UpdateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Build updates map for partial update
-	updates := make(map[string]interface{})
-
-	// Update title if provided
+	// Update fields if provided
 	if req.Title != nil {
 		title := utils.SanitizeString(*req.Title)
-		if !utils.IsNotEmpty(title) {
-			utils.SendError(w, "Title cannot be empty", http.StatusBadRequest)
-			return
-		}
 		if !utils.IsValidLength(title, 1, 255) {
 			utils.SendError(w, "Title must be between 1 and 255 characters", http.StatusBadRequest)
 			return
 		}
-		updates["title"] = title
+		task.Title = title
 	}
 
-	// Update completed if provided
 	if req.Completed != nil {
-		updates["completed"] = *req.Completed
+		task.Completed = *req.Completed
 	}
 
-	// Check if there are any updates to apply
-	if len(updates) == 0 {
-		utils.SendError(w, "No fields to update", http.StatusBadRequest)
-		return
-	}
-
-	// Apply updates to the task
-	if err := db.DB.Model(&task).Updates(updates).Error; err != nil {
+	// Save updates
+	if err := db.DB.Save(&task).Error; err != nil {
 		utils.SendError(w, "Failed to update task", http.StatusInternalServerError)
-		return
-	}
-
-	// Reload the task to get updated values
-	if err := db.DB.Where("id = ?", id).First(&task).Error; err != nil {
-		utils.SendError(w, "Failed to retrieve updated task", http.StatusInternalServerError)
 		return
 	}
 
@@ -178,18 +165,23 @@ func UpdateTask(w http.ResponseWriter, r *http.Request) {
 
 // DeleteTask permanently deletes a task from the database
 func DeleteTask(w http.ResponseWriter, r *http.Request) {
-	// Extract ID from path parameter using Go 1.22+ ServeMux
-	id := r.PathValue("id")
-
-	// Validate ID is not empty
-	if id == "" {
+	// Extract ID from path parameter
+	idParam := r.PathValue("id")
+	if idParam == "" {
 		utils.SendError(w, "Task ID is required", http.StatusBadRequest)
 		return
 	}
 
-	// Find existing task to ensure it exists
+	// Parse UUID
+	taskID, err := uuid.Parse(idParam)
+	if err != nil {
+		utils.SendError(w, "Invalid task ID format", http.StatusBadRequest)
+		return
+	}
+
+	// Check if task exists
 	var task models.Task
-	if err := db.DB.Where("id = ?", id).First(&task).Error; err != nil {
+	if err := db.DB.Where("id = ?", taskID).First(&task).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			utils.SendError(w, "Task not found", http.StatusNotFound)
 			return
@@ -198,38 +190,23 @@ func DeleteTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Permanently delete the task using Unscoped to bypass soft delete
+	// Permanently delete the task (using Unscoped to bypass soft delete)
 	if err := db.DB.Unscoped().Delete(&task).Error; err != nil {
 		utils.SendError(w, "Failed to delete task", http.StatusInternalServerError)
 		return
 	}
 
-	utils.SendSuccess(w, map[string]string{
+	utils.SendSuccess(w, map[string]interface{}{
 		"message": "Task deleted successfully",
-		"id":      id,
+		"id":      taskID,
 	})
 }
 
-// DeleteCompletedTasks permanently deletes all completed tasks from the database
+// DeleteCompletedTasks deletes all completed tasks in bulk
 func DeleteCompletedTasks(w http.ResponseWriter, r *http.Request) {
-	// Count completed tasks before deletion
-	var count int64
-	if err := db.DB.Model(&models.Task{}).Where("completed = ?", true).Count(&count).Error; err != nil {
-		utils.SendError(w, "Failed to count completed tasks", http.StatusInternalServerError)
-		return
-	}
-
-	// If no completed tasks found, return early
-	if count == 0 {
-		utils.SendSuccess(w, map[string]interface{}{
-			"message":       "No completed tasks to delete",
-			"deleted_count": 0,
-		})
-		return
-	}
-
-	// Permanently delete all completed tasks using Unscoped to bypass soft delete
+	// Delete all tasks where completed = true
 	result := db.DB.Unscoped().Where("completed = ?", true).Delete(&models.Task{})
+
 	if result.Error != nil {
 		utils.SendError(w, "Failed to delete completed tasks", http.StatusInternalServerError)
 		return

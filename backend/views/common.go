@@ -1,25 +1,29 @@
 package views
 
-// PaginationRequest represents pagination parameters
-type PaginationRequest struct {
-	Page     int `json:"page"`
-	PageSize int `json:"page_size"`
+// SuccessResponse represents a generic successful response
+type SuccessResponse struct {
+	Success bool        `json:"success"`
+	Data    interface{} `json:"data"`
 }
 
-// PaginationResponse represents pagination metadata in responses
-type PaginationResponse struct {
-	Page       int   `json:"page"`
-	PageSize   int   `json:"page_size"`
-	TotalItems int64 `json:"total_items"`
-	TotalPages int   `json:"total_pages"`
+// ErrorResponse represents a generic error response
+type ErrorResponse struct {
+	Success bool   `json:"success"`
+	Error   string `json:"error"`
 }
 
-// MessageResponse represents a simple message response
+// MessageResponse represents a response with just a message
 type MessageResponse struct {
+	Success bool   `json:"success"`
 	Message string `json:"message"`
 }
 
-// IDResponse represents a response containing an ID
-type IDResponse struct {
-	ID string `json:"id"`
+// PaginatedResponse represents a paginated response
+type PaginatedResponse struct {
+	Success    bool        `json:"success"`
+	Data       interface{} `json:"data"`
+	Page       int         `json:"page"`
+	PageSize   int         `json:"page_size"`
+	TotalCount int64       `json:"total_count"`
+	TotalPages int         `json:"total_pages"`
 }

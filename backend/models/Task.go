@@ -9,7 +9,7 @@ import (
 
 // Task represents a task in the database
 type Task struct {
-	ID        string         `gorm:"type:uuid;primaryKey" json:"id"`
+	ID        uuid.UUID      `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
 	Title     string         `gorm:"type:varchar(255);not null" json:"title"`
 	Completed bool           `gorm:"default:false" json:"completed"`
 	CreatedAt time.Time      `gorm:"autoCreateTime" json:"createdAt"`
@@ -20,12 +20,4 @@ type Task struct {
 // TableName returns the table name for the Task model
 func (Task) TableName() string {
 	return "tasks"
-}
-
-// BeforeCreate generates a UUID before creating a new task
-func (t *Task) BeforeCreate(tx *gorm.DB) error {
-	if t.ID == "" {
-		t.ID = uuid.New().String()
-	}
-	return nil
 }

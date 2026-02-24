@@ -37,19 +37,18 @@ func InitDB() {
 	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s search_path=%s sslmode=disable", host, user, password, dbname, port, schema)
 
 	// Configure GORM logger
-	gormLogger := logger.New(
+	newLogger := logger.New(
 		log.New(os.Stdout, "\r\n", log.LstdFlags),
 		logger.Config{
 			SlowThreshold:             time.Second,
-			LogLevel:                  logger.Warn,
+			LogLevel:                  logger.Info,
 			IgnoreRecordNotFoundError: true,
 			Colorful:                  true,
 		},
 	)
 
-	var err error
-	DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{
-		Logger: gormLogger,
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
+		Logger: newLogger,
 	})
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
@@ -57,13 +56,13 @@ func InitDB() {
 
 	// Set search_path explicitly after connection
 	if schema != "" {
-		if err := DB.Exec(fmt.Sprintf("SET search_path TO %s", schema)).Error; err != nil {
+		if err := db.Exec(fmt.Sprintf("SET search_path TO %s", schema)).Error; err != nil {
 			log.Printf("Failed to set search_path to %s: %v", schema, err)
 		}
 	}
 
 	// Configure connection pool
-	sqlDB, err := DB.DB()
+	sqlDB, err := db.DB()
 	if err != nil {
 		log.Fatalf("Failed to get underlying sql.DB: %v", err)
 	}
@@ -72,10 +71,11 @@ func InitDB() {
 	sqlDB.SetMaxOpenConns(100)
 	sqlDB.SetConnMaxLifetime(time.Hour)
 
+	DB = db
 	log.Println("Database connection established successfully")
 }
 
-// AutoMigrate runs auto-migration for the provided models
+// AutoMigrate runs auto migration for the given models
 func AutoMigrate(models ...interface{}) error {
 	return DB.AutoMigrate(models...)
 }
