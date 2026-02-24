@@ -1,0 +1,369 @@
+{
+  "project_metadata": {
+    "project_name": "task-manager",
+    "project_category": "Productivity",
+    "description": "A modern, minimalist to-do application that helps users organize their daily tasks efficiently. Features intuitive task management with filtering capabilities and a clean, distraction-free interface.",
+    "core_purpose": "Help users capture, organize, and complete their daily tasks with a simple yet powerful task management system",
+    "target_audience": "Professionals",
+    "key_features": [
+      "Create new tasks with a single input",
+      "Mark tasks as complete or incomplete with one click",
+      "Edit existing tasks inline",
+      "Delete tasks with confirmation",
+      "Filter tasks by status (All, Active, Completed)",
+      "Real-time task counter showing remaining items",
+      "Persistent storage with database backend"
+    ]
+  },
+  "frontend": {
+    "pages": [
+      {
+        "page_name": "home",
+        "route": "/",
+        "show_in_nav": true,
+        "nav_order": 1,
+        "purpose": "Main task management interface where users can view, add, edit, and manage all their to-do items",
+        "sections": [
+          "Header",
+          "TaskInput",
+          "FilterBar",
+          "TaskList",
+          "Footer"
+        ],
+        "content_notes": "The home page serves as the single-page application interface. The Header contains the app logo and title 'TaskFlow'. TaskInput section features a prominent input field with placeholder 'What needs to be done?' and an add button. FilterBar displays three filter buttons (All, Active, Completed) with the active filter highlighted, plus a task counter showing 'X items left'. TaskList renders all tasks as interactive cards with checkbox, task title, edit icon, and delete icon. Each task card has subtle hover effects. Footer shows a 'Clear Completed' button when completed tasks exist.",
+        "data_needs": [
+          "GET /api/tasks",
+          "POST /api/tasks",
+          "PUT /api/tasks/:id",
+          "DELETE /api/tasks/:id"
+        ],
+        "is_protected": false
+      },
+      {
+        "page_name": "about",
+        "route": "/about",
+        "show_in_nav": true,
+        "nav_order": 2,
+        "purpose": "Provides information about the TaskFlow app, its features, and usage tips",
+        "sections": [
+          "Hero",
+          "Features",
+          "HowToUse",
+          "Credits"
+        ],
+        "content_notes": "Hero section with app name and tagline 'Simple task management for focused productivity'. Features section highlights key capabilities with icons: Quick Add, One-Click Complete, Smart Filters, Clean Design. HowToUse section provides step-by-step instructions with illustrations. Credits section mentions the technology stack used.",
+        "data_needs": [],
+        "is_protected": false
+      }
+    ],
+    "navigation": {
+      "type": "header",
+      "position": "sticky",
+      "style": "horizontal",
+      "has_logo": true,
+      "has_search": false,
+      "extra_items": [
+        "GitHub"
+      ]
+    },
+    "theme": {
+      "design_dna": "MINIMALIST_MONOCHROME",
+      "color_scheme": "light",
+      "primary_color": "#000000",
+      "secondary_color": "#FFFFFF",
+      "accent_color": "#000000",
+      "font_family": "Playfair Display",
+      "font_type": "serif",
+      "border_radius": "none",
+      "shadow_style": "none",
+      "animation_style": "minimal",
+      "interaction_style": "subtle"
+    },
+    "components": [
+      {
+        "component_name": "taskInput",
+        "type": "shared",
+        "used_on": [
+          "home"
+        ],
+        "purpose": "Input field component for adding new tasks with submit button",
+        "props": [
+          "onAddTask",
+          "placeholder",
+          "isLoading"
+        ]
+      },
+      {
+        "component_name": "taskItem",
+        "type": "shared",
+        "used_on": [
+          "home"
+        ],
+        "purpose": "Individual task card displaying task details with interactive controls for completing, editing, and deleting",
+        "props": [
+          "task",
+          "onToggleComplete",
+          "onEdit",
+          "onDelete",
+          "isEditing"
+        ]
+      },
+      {
+        "component_name": "taskList",
+        "type": "shared",
+        "used_on": [
+          "home"
+        ],
+        "purpose": "Container component that renders a list of TaskItem components with empty state handling",
+        "props": [
+          "tasks",
+          "filter",
+          "onToggleComplete",
+          "onEdit",
+          "onDelete"
+        ]
+      },
+      {
+        "component_name": "filterBar",
+        "type": "shared",
+        "used_on": [
+          "home"
+        ],
+        "purpose": "Filter buttons and task counter component for switching between All, Active, and Completed views",
+        "props": [
+          "activeFilter",
+          "onFilterChange",
+          "itemsLeft",
+          "onClearCompleted",
+          "hasCompleted"
+        ]
+      },
+      {
+        "component_name": "editModal",
+        "type": "shared",
+        "used_on": [
+          "home"
+        ],
+        "purpose": "Modal dialog for editing task title with save and cancel actions",
+        "props": [
+          "task",
+          "isOpen",
+          "onClose",
+          "onSave"
+        ]
+      },
+      {
+        "component_name": "emptyState",
+        "type": "shared",
+        "used_on": [
+          "home"
+        ],
+        "purpose": "Displays friendly message when no tasks exist or when filter returns no results",
+        "props": [
+          "filter",
+          "message"
+        ]
+      },
+      {
+        "component_name": "header",
+        "type": "shared",
+        "used_on": [
+          "home",
+          "about"
+        ],
+        "purpose": "Application header with logo, navigation links, and consistent branding",
+        "props": [
+          "currentPage"
+        ]
+      },
+      {
+        "component_name": "footer",
+        "type": "shared",
+        "used_on": [
+          "home",
+          "about"
+        ],
+        "purpose": "Application footer with clear completed button on home page and credits",
+        "props": [
+          "showClearCompleted",
+          "onClearCompleted",
+          "completedCount"
+        ]
+      }
+    ],
+    "layout": {
+      "has_header": true,
+      "has_footer": true,
+      "has_sidebar": false,
+      "max_width": "container",
+      "spacing": "spacious",
+      "footer_links": [
+        "GitHub",
+        "About"
+      ]
+    }
+  },
+  "backend": {
+    "requires_backend": true,
+    "apis": [
+      {
+        "endpoint": "/api/tasks",
+        "method": "GET",
+        "purpose": "Retrieve all tasks from the database, optionally filtered by completion status",
+        "request_body": {},
+        "response": {
+          "count": "integer",
+          "tasks": "array of task objects"
+        },
+        "auth": false,
+        "used_by": [
+          "home"
+        ]
+      },
+      {
+        "endpoint": "/api/tasks",
+        "method": "POST",
+        "purpose": "Create a new task with the provided title",
+        "request_body": {
+          "title": "string"
+        },
+        "response": {
+          "completed": "boolean",
+          "createdAt": "timestamp",
+          "id": "string",
+          "title": "string",
+          "updatedAt": "timestamp"
+        },
+        "auth": false,
+        "used_by": [
+          "home"
+        ]
+      },
+      {
+        "endpoint": "/api/tasks/:id",
+        "method": "GET",
+        "purpose": "Retrieve a single task by its unique identifier",
+        "request_body": {},
+        "response": {
+          "completed": "boolean",
+          "createdAt": "timestamp",
+          "id": "string",
+          "title": "string",
+          "updatedAt": "timestamp"
+        },
+        "auth": false,
+        "used_by": [
+          "home"
+        ]
+      },
+      {
+        "endpoint": "/api/tasks/:id",
+        "method": "PUT",
+        "purpose": "Update an existing task's title or completion status",
+        "request_body": {
+          "completed": "boolean",
+          "title": "string"
+        },
+        "response": {
+          "completed": "boolean",
+          "createdAt": "timestamp",
+          "id": "string",
+          "title": "string",
+          "updatedAt": "timestamp"
+        },
+        "auth": false,
+        "used_by": [
+          "home"
+        ]
+      },
+      {
+        "endpoint": "/api/tasks/:id",
+        "method": "DELETE",
+        "purpose": "Permanently delete a task from the database",
+        "request_body": {},
+        "response": {
+          "deletedId": "string",
+          "message": "string"
+        },
+        "auth": false,
+        "used_by": [
+          "home"
+        ]
+      },
+      {
+        "endpoint": "/api/tasks/completed",
+        "method": "DELETE",
+        "purpose": "Delete all completed tasks in bulk for clearing finished items",
+        "request_body": {},
+        "response": {
+          "deletedCount": "integer",
+          "message": "string"
+        },
+        "auth": false,
+        "used_by": [
+          "home"
+        ]
+      }
+    ],
+    "database": {
+      "models": [
+        {
+          "model_name": "task",
+          "fields": {
+            "completed": "boolean default false",
+            "createdAt": "timestamp default now",
+            "id": "uuid primary key",
+            "title": "string not null",
+            "updatedAt": "timestamp default now"
+          },
+          "relationships": [],
+          "indexes": [
+            "completed",
+            "createdAt"
+          ]
+        }
+      ]
+    },
+    "authentication": {
+      "required": false,
+      "type": "none",
+      "providers": [],
+      "protected_apis": []
+    },
+    "external_apis": [],
+    "file_storage": {
+      "required": false,
+      "types": [],
+      "max_size": ""
+    }
+  },
+  "technical_specs": {
+    "frontend": {
+      "framework": "React",
+      "routing": "react-router-dom",
+      "styling": "Tailwind CSS",
+      "state_management": "React Context",
+      "animation": "Framer Motion",
+      "dependencies": [
+        "react@^18.2.0",
+        "react-dom@^18.2.0",
+        "react-router-dom@^6.15.0",
+        "framer-motion",
+        "lucide-react",
+        "clsx",
+        "tailwind-merge"
+      ]
+    },
+    "backend": {
+      "framework": "Standard Library",
+      "database": "PostgreSQL",
+      "orm": "none",
+      "auth": "None",
+      "dependencies": [
+        "github.com/google/uuid",
+        "github.com/lib/pq",
+        "github.com/rs/cors"
+      ]
+    }
+  }
+}
